@@ -9,6 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
+    "mockups": "node scripts/render-mockups.mjs",
+    "render:pdf": "node scripts/render-pdf.mjs",
     "deploy": "yarn build && wrangler pages deploy"
   },
   "dependencies": {
