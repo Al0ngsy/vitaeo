@@ -17,7 +17,7 @@ export interface SectionStyles {
   entryMeta: Style
   bullet: Style
   entryEnd: Style
-  skillGroup?: Style
+  skillGroup: Style
   skillRow: Style
 }
 
@@ -186,7 +186,7 @@ export function RichText({
   )
 }
 
-const stripBulletMarker = (t: string) => t.replace(/^[-•]\s*/, '')
+export const stripBulletMarker = (t: string) => t.replace(/^[-•]\s*/, '')
 
 // Renders one content section by id (built-in or custom) in the given style set.
 export function renderSection(
@@ -212,7 +212,7 @@ export function renderSection(
           {groups?.map((g, i) => (
             <Fragment key={i}>
               {g.name.trim() && (
-                <Text style={s.skillGroup ? [s.skillGroup, { color: accent }] : s.entryMeta}>{g.name}</Text>
+                <Text style={[s.skillGroup, { color: accent }]}>{g.name}</Text>
               )}
               <Text style={s.skillRow}>{g.skills.join(', ')}</Text>
             </Fragment>

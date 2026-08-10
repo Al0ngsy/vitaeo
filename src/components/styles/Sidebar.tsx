@@ -9,7 +9,7 @@ import { Fragment, useMemo } from 'react'
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 import { DEFAULT_ACCENT } from '../../lib/cv/types'
 import type { CvStyleComponent } from './types'
-import { applyFontSizes, contactItems, labelOf, RichText } from './sections'
+import { applyFontSizes, contactItems, labelOf, RichText, stripBulletMarker } from './sections'
 
 const RAIL_BG = '#eef1f4'
 
@@ -198,7 +198,7 @@ export const Sidebar: CvStyleComponent = ({ cv, backupString }) => {
                 {cs.items.map((item, i) => (
                   <RichText
                     key={i}
-                    text={`• ${item.replace(/^[-•]\s*/, '')}`}
+                    text={`• ${stripBulletMarker(item)}`}
                     style={styles.skillRow}
                     linkStyle={{ color: accent, textDecoration: 'underline' }}
                   />
