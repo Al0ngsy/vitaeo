@@ -1,0 +1,30 @@
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  background: #0b0e13;
+}
+
+/* slim dark scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2a3142 transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #2a3142;
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::selection {
+  background: rgba(245, 158, 11, 0.35);
+}
