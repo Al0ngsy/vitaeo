@@ -33,6 +33,7 @@ import type {
 } from '../lib/cv/types'
 import { FONT_SIZE_FIELDS, LABEL_FIELDS, LABEL_LANGS, LABEL_LANG_OPTIONS } from '../lib/cv/types'
 import { useUiLang } from '../lib/i18n'
+import PhotoCropDialog from './PhotoCropDialog'
 
 const SECTION_LABELS: Record<string, string> = {
   profile: 'profile',
@@ -194,26 +195,33 @@ export default function CvForm({ cv, onChange }: CvFormProps) {
 
   const textFieldProps = { size: 'small' as const, fullWidth: true }
 
-  // --- photo upload: resize to a small JPEG dataURL, stored in the CV ---
+  // --- photo upload: open the crop editor, then store a 4:5 portrait JPEG ---
+  // Any image type/orientation is accepted. The editor's default crop is biased
+  // toward the top (faces sit above centre), and the user can drag/zoom to adjust.
   const photoRef = useRef<HTMLInputElement>(null)
+  const objectUrlRef = useRef<string | null>(null)
+  const [cropSrc, setCropSrc] = useState<string | null>(null)
+
   const handlePhoto = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
-    const img = new Image()
-    img.onload = () => {
-      const MAX = 300
-      const scale = Math.min(1, MAX / Math.max(img.width, img.height))
-      const canvas = document.createElement('canvas')
-      canvas.width = Math.round(img.width * scale)
-      canvas.height = Math.round(img.height * scale)
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-      patchProfile({ photo: canvas.toDataURL('image/jpeg', 0.85) })
-      URL.revokeObjectURL(img.src)
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
+    objectUrlRef.current = URL.createObjectURL(file)
+    setCropSrc(objectUrlRef.current)
+  }
+
+  const closeCrop = () => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current)
+      objectUrlRef.current = null
     }
-    img.src = URL.createObjectURL(file)
+    setCropSrc(null)
+  }
+
+  const applyCrop = (dataUrl: string) => {
+    patchProfile({ photo: dataUrl })
+    closeCrop()
   }
 
   const moveProps = (id: string) => ({
@@ -862,6 +870,8 @@ export default function CvForm({ cv, onChange }: CvFormProps) {
       >
         {t('addCustomSection')}
       </Button>
+
+      <PhotoCropDialog open={!!cropSrc} src={cropSrc} onClose={closeCrop} onApply={applyCrop} />
     </Stack>
   )
 }
