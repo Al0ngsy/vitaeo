@@ -13,7 +13,7 @@ const BASE_STYLES = StyleSheet.create({
     color: '#222',
   },
   header: { alignItems: 'center', marginBottom: 6 },
-  photo: { width: 84, height: 106, borderRadius: 42, marginBottom: 10 },
+  photo: { width: 84, height: 106, borderRadius: 42, marginBottom: 10, objectFit: 'cover' },
   name: {
     fontSize: 22,
     fontFamily: 'Helvetica-Bold',

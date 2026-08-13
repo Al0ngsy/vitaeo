@@ -33,7 +33,7 @@ const makeStyles = (accent: string, accent2: string) =>
     rule: { height: 2.5, width: '100%', backgroundColor: accent2, marginBottom: 10 },
     headline: { fontSize: 11.5, color: '#445', marginBottom: 5 },
     contact: { fontSize: 9, color: '#667' },
-    photo: { width: 66, height: 83, borderRadius: 4 },
+    photo: { width: 66, height: 83, borderRadius: 4, objectFit: 'cover' },
     section: {
       fontFamily: 'Helvetica-Bold',
       fontSize: 11,

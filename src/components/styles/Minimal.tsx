@@ -13,7 +13,7 @@ const BASE_STYLES = StyleSheet.create({
     color: '#222',
   },
   header: { flexDirection: 'row', marginBottom: 4 },
-  photo: { width: 78, height: 98, borderRadius: 4, marginRight: 20 },
+  photo: { width: 78, height: 98, borderRadius: 4, marginRight: 20, objectFit: 'cover' },
   headerText: { flex: 1 },
   name: {
     fontSize: 24,
