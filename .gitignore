@@ -25,3 +25,9 @@ dist-ssr
 
 # CV mockup renders contain personal CV data — never commit
 docs/design-mockups/
+
+# Environment / deploy secrets
+.env
+.env.*
+deploy-secrets.env
+
