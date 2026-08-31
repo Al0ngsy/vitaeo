@@ -222,6 +222,7 @@ export interface CvData {
     linkedin?: string
     github?: string
     photo?: string // dataURL (resized JPEG)
+    photoSource?: string // dataURL of a bounded (downscaled) original — used as the source for re-cropping via "Adjust photo"; absent for legacy CVs
   }
   summary: string
   skills: string[]

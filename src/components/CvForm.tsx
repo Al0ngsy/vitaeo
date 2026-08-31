@@ -33,6 +33,7 @@ import type {
 } from '../lib/cv/types'
 import { FONT_SIZE_FIELDS, LABEL_FIELDS, LABEL_LANGS, LABEL_LANG_OPTIONS } from '../lib/cv/types'
 import { useUiLang } from '../lib/i18n'
+import PhotoCropDialog from './PhotoCropDialog'
 
 const SECTION_LABELS: Record<string, string> = {
   profile: 'profile',
@@ -43,6 +44,40 @@ const SECTION_LABELS: Record<string, string> = {
   education: 'education',
   languages: 'languages',
   certifications: 'certifications',
+}
+
+// The crop dialog outputs ≤800 px JPEGs. The stored adjust source only needs to
+// be a bit larger than that (with headroom for zoom) to keep the localStorage /
+// encoded CV string small while still allowing the whole frame to be re-cropped.
+const MAX_PHOTO_SOURCE_DIM = 1600
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = () => reject(new Error('Could not load image'))
+    img.src = src
+  })
+}
+
+/**
+ * Returns a bounded (downscaled, aspect-preserving) JPEG data URL of the image
+ * at `src`. Used to keep the uncropped frame around as an "adjust source" so
+ * re-cropping an existing photo works from the full image instead of only
+ * cropping the already-cropped result further.
+ */
+async function makeBoundedImageDataUrl(src: string, maxDim: number): Promise<string> {
+  const img = await loadImage(src)
+  const scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight))
+  const w = Math.max(1, Math.round(img.naturalWidth * scale))
+  const h = Math.max(1, Math.round(img.naturalHeight * scale))
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('Canvas 2D context unavailable')
+  ctx.drawImage(img, 0, 0, w, h)
+  return canvas.toDataURL('image/jpeg', 0.85)
 }
 
 const EXPANDED_BY_DEFAULT = ['profile', 'summary', 'skills']
@@ -194,26 +229,54 @@ export default function CvForm({ cv, onChange }: CvFormProps) {
 
   const textFieldProps = { size: 'small' as const, fullWidth: true }
 
-  // --- photo upload: resize to a small JPEG dataURL, stored in the CV ---
+  // --- photo upload: open the crop editor, then store a 4:5 portrait JPEG ---
+  // Any image type/orientation is accepted. The editor's default crop is biased
+  // toward the top (faces sit above centre), and the user can drag/zoom to adjust.
   const photoRef = useRef<HTMLInputElement>(null)
+  const objectUrlRef = useRef<string | null>(null)
+  const [cropSrc, setCropSrc] = useState<string | null>(null)
+
   const handlePhoto = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
-    const img = new Image()
-    img.onload = () => {
-      const MAX = 300
-      const scale = Math.min(1, MAX / Math.max(img.width, img.height))
-      const canvas = document.createElement('canvas')
-      canvas.width = Math.round(img.width * scale)
-      canvas.height = Math.round(img.height * scale)
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-      patchProfile({ photo: canvas.toDataURL('image/jpeg', 0.85) })
-      URL.revokeObjectURL(img.src)
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
+    objectUrlRef.current = URL.createObjectURL(file)
+    setCropSrc(objectUrlRef.current)
+  }
+
+  const closeCrop = () => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current)
+      objectUrlRef.current = null
     }
-    img.src = URL.createObjectURL(file)
+    setCropSrc(null)
+  }
+
+  const applyCrop = async (dataUrl: string) => {
+    // Keep a bounded, uncropped "adjust source" derived from the picked file so
+    // the photo can later be re-cropped from the full frame. When adjusting an
+    // existing photo (no object URL), the previously stored source is kept.
+    let photoSource: string | undefined
+    const sourceUrl = objectUrlRef.current
+    if (sourceUrl) {
+      try {
+        photoSource = await makeBoundedImageDataUrl(sourceUrl, MAX_PHOTO_SOURCE_DIM)
+      } catch (err) {
+        console.warn('Failed to build photo adjust source', err)
+      }
+    }
+    patchProfile({ photo: dataUrl, ...(photoSource && { photoSource }) })
+    closeCrop()
+  }
+
+  // Re-open the crop editor so an already stored photo (e.g. restored from
+  // localStorage or a PDF round-trip) can be re-adjusted. Prefer the full
+  // adjust source; fall back to the cropped dataURL for legacy CVs.
+  // No object URL is created here, so closeCrop's null-guard keeps it safe.
+  const adjustPhoto = () => {
+    const src = cv.profile.photoSource || cv.profile.photo
+    if (src) setCropSrc(src)
   }
 
   const moveProps = (id: string) => ({
@@ -841,9 +904,17 @@ export default function CvForm({ cv, onChange }: CvFormProps) {
                 {t('uploadPhoto')}
               </Button>
               {cv.profile.photo && (
-                <Button size="small" onClick={() => patchProfile({ photo: undefined })}>
-                  {t('removePhoto')}
-                </Button>
+                <>
+                  <Button size="small" onClick={adjustPhoto}>
+                    {t('adjustPhoto')}
+                  </Button>
+                  <Button
+                    size="small"
+                    onClick={() => patchProfile({ photo: undefined, photoSource: undefined })}
+                  >
+                    {t('removePhoto')}
+                  </Button>
+                </>
               )}
             </Stack>
           </Stack>
@@ -862,6 +933,8 @@ export default function CvForm({ cv, onChange }: CvFormProps) {
       >
         {t('addCustomSection')}
       </Button>
+
+      <PhotoCropDialog open={!!cropSrc} src={cropSrc} onClose={closeCrop} onApply={applyCrop} />
     </Stack>
   )
 }
